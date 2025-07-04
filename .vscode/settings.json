@@ -1,0 +1,10 @@
+{
+    "pylint.interpreter": [
+        "/Users/kaiwang/.pyenv/shims/python"
+    ],
+    "python.defaultInterpreterPath": "/Users/kaiwang/.pyenv/shims/python",
+    "cSpell.words": [
+        "autoflush",
+        "sessionmaker"
+    ]
+}

@@ -1,8 +1,15 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
+"""Module providing settings for the application."""
+
 from typing import Optional
 
+from pydantic.v1 import BaseSettings
+
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file='.env', extra='ignore')
+    """Class representing settings for the application."""
+    class Config:
+        """Configuration for the settings class."""
+        env_file = '.env'
+        extra = 'ignore'
 
     DATABASE_URL: str
     COINGECKO_API_KEY: Optional[str] = None

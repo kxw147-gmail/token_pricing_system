@@ -1,13 +1,13 @@
-from fastapi import Request, Response, HTTPException, status
-from fastapi.routing import APIRoute
+"""This module implements a rate limiting middleware for FastAPI applications."""
+import time
+from fastapi import Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse # type: ignore
-from app.core.config import settings
 from app.core.security_utils import decode_access_token
-import time
 from app.services.cache_service import _cache # Import the in-memory cache directly
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
+    """ Middleware to limit the number of requests per user per minute."""
     def __init__(self, app, limit_per_minute: int = 60):
         super().__init__(app)
         self.limit_per_minute = limit_per_minute

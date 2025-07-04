@@ -1,16 +1,17 @@
+"""This module contains integration tests for the API endpoints of the token pricing system."""
+from datetime import datetime, timedelta, timezone
+import time # For rate limit test
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session # type: ignore
 from app.models.user import User
 from app.core.security_utils import get_password_hash
-from app.schemas.user import UserCreate
 from app.schemas.token_price import TokenPriceCreate
-from datetime import datetime, timedelta, timezone
-import time # For rate limit test
 
 # Import settings for RATE_LIMIT_PER_MINUTE
 from app.core.config import settings
 
 def create_test_user(db: Session, username: str, password: str):
+    """Helper function to create a test user in the database."""
     hashed_password = get_password_hash(password)
     user = User(username=username, hashed_password=hashed_password, is_active=True)
     db.add(user)
@@ -19,6 +20,7 @@ def create_test_user(db: Session, username: str, password: str):
     return user
 
 def get_auth_token(client: TestClient, username, password):
+    """Helper function to get an authentication token for a user."""
     response = client.post(
         "/api/v1/token",
         data={"username": username, "password": password}
@@ -27,6 +29,7 @@ def get_auth_token(client: TestClient, username, password):
     return response.json()["access_token"]
 
 def test_register_user(client: TestClient, db_session: Session):
+    """Test user registration endpoint."""
     user_data = {"username": "testuser_reg", "password": "password123"}
     response = client.post("/api/v1/register", json=user_data)
     assert response.status_code == 201
@@ -34,6 +37,7 @@ def test_register_user(client: TestClient, db_session: Session):
     assert "hashed_password" in response.json()
 
 def test_login_and_get_me(client: TestClient, db_session: Session):
+    """Test user login and fetching user details."""
     create_test_user(db_session, "testuser_login", "password123")
     token = get_auth_token(client, "testuser_login", "password123")
 

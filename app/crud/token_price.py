@@ -1,12 +1,16 @@
+
+"""price.py CRUD operations for token prices."""
+from datetime import datetime
+from typing import List
 from sqlalchemy.orm import Session # type: ignore
-from sqlalchemy import text, func, distinct
-from datetime import datetime, timedelta
-from typing import List, Optional
+from sqlalchemy import func, distinct
+
 
 from app.models.token_price import TokenPrice
 from app.schemas.token_price import TokenPriceCreate
 
 def create_token_price(db: Session, token_price: TokenPriceCreate):
+    """Create a new token price entry in the database."""
     db_token_price = TokenPrice(**token_price.model_dump())
     db.add(db_token_price)
     db.commit()
@@ -14,6 +18,7 @@ def create_token_price(db: Session, token_price: TokenPriceCreate):
     return db_token_price
 
 def get_token_price(db: Session, token_price_id: int):
+    """Get a token price by its ID."""
     return db.query(TokenPrice).filter(TokenPrice.id == token_price_id).first()
 
 def get_token_prices(
@@ -25,6 +30,7 @@ def get_token_prices(
     skip: int = 0,
     limit: int = 100
 ) -> List[TokenPrice]:
+    """Get token prices for a specific token symbol and granularity within a time range."""
     return db.query(TokenPrice).filter(
         TokenPrice.token_symbol == token_symbol,
         TokenPrice.granularity == granularity,
@@ -33,6 +39,7 @@ def get_token_prices(
     ).order_by(TokenPrice.timestamp).offset(skip).limit(limit).all()
 
 def get_latest_token_price(db: Session, token_symbol: str, granularity: str):
+    """Get the latest token price for a specific token symbol and granularity."""
     return db.query(TokenPrice).filter(
         TokenPrice.token_symbol == token_symbol,
         TokenPrice.granularity == granularity
@@ -43,6 +50,7 @@ def get_all_token_symbols(db: Session) -> List[str]:
 
 # Aggregation functions (for SQLite, using standard SQL date functions)
 def get_hourly_aggregates(db: Session, start_time: datetime, end_time: datetime):
+    """ Get hourly aggregates for token prices."""
     # Standard SQL aggregation for hourly. Note: SQLite does not have a direct equivalent to `time_bucket`.
     # We use `strftime` for grouping.
     # For `price_last` and `price_first` for SQLite, true last/first in group is complex.
@@ -66,6 +74,7 @@ def get_hourly_aggregates(db: Session, start_time: datetime, end_time: datetime)
     ).all()
 
 def get_daily_aggregates(db: Session, start_time: datetime, end_time: datetime):
+    """ Get daily aggregates for token prices."""
     # Standard SQL aggregation for daily.
     return db.query(
         TokenPrice.token_symbol,

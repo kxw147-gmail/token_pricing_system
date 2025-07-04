@@ -7,4 +7,5 @@ passlib[bcrypt] # For password hashing
 python-dotenv
 httpx # For external API calls
 tenacity # For retries
-#asyncio_rate_limit # For rate limiting external API calls, module not found
+pytest
+# asyncio_rate_limit # For rate limiting external API calls, module not found

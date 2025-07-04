@@ -1,8 +1,9 @@
+""" This module defines the TokenPrice model for storing token price data in the database."""
 from sqlalchemy import Column, DateTime, Float, String, Integer, UniqueConstraint
 from app.core.db import Base
-from datetime import datetime
 
 class TokenPrice(Base):
+    """Model representing token price data."""
     __tablename__ = "token_prices"
 
     id = Column(Integer, primary_key=True, index=True)
