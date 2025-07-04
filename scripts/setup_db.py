@@ -1,3 +1,4 @@
+"""This script sets up the SQLite database for the token pricing system."""
 import sys
 import os
 from sqlalchemy import text
