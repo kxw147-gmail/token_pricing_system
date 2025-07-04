@@ -3,7 +3,6 @@ from passlib.context import CryptContext
 from sqlalchemy import Column, Integer, String, Boolean
 from app.core.db import Base
 
-
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class User(Base):

@@ -1,14 +1,13 @@
-from fastapi import FastAPI, HTTPException, status
+""" Main entry point for the FastAPI application, including startup and shutdown events, middleware, and API routes."""
+import asyncio
+from fastapi import FastAPI, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.middleware.cors import CORSMiddleware
-import asyncio
-
 from app.api import endpoints
 from app.core.config import settings
-from app.core.db import Base, engine # Import Base and engine to ensure tables are registered
 from app.services.cache_service import connect_redis, disconnect_redis # Only need connect/disconnect
-from app.middlewares.rate_limit import RateLimitMiddleware # Custom rate limit middleware
+from app.middleware.rate_limit import RateLimitMiddleware # Custom rate limit middleware
 
 # Import background service functions
 from app.services.ingestion_service import start_ingestion_loop
@@ -35,6 +34,7 @@ app.add_middleware(RateLimitMiddleware, limit_per_minute=settings.RATE_LIMIT_PER
 
 @app.on_event("startup")
 async def startup_event():
+    """Application startup event handler."""
     # Initialize in-memory cache
     await connect_redis() # This now initializes the in-memory cache cleanup task
 
@@ -53,6 +53,7 @@ async def startup_event():
 
 @app.on_event("shutdown")
 async def shutdown_event():
+    """Application shutdown event handler."""
     # No explicit disconnection for in-memory cache
     await disconnect_redis()
     print("Application shutdown complete.")
@@ -60,6 +61,7 @@ async def shutdown_event():
 # Global Exception Handler for validation errors
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
+    """Handle request validation errors globally."""
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={"detail": exc.errors(), "body": exc.body},
@@ -70,4 +72,5 @@ app.include_router(endpoints.router, prefix="/api/v1", tags=["Token Prices", "Au
 
 @app.get("/")
 async def root():
+    """Root endpoint to check if the API is running."""
     return {"message": "Welcome to the Token Pricing API. Check /docs for API documentation."}

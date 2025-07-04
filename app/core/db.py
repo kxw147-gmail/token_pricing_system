@@ -1,7 +1,4 @@
-"""_summary_
-
-    Yields:
-        _type_: _description_"""
+""" Database connection and session management for the application."""
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from app.core.config import settings
@@ -16,4 +13,4 @@ def get_db():
     try:
         yield db
     finally:
-        db.close()
+        db.close() # Ensure the session is closed after use

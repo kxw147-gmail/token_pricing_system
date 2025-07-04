@@ -1,4 +1,4 @@
-"""This module implements a rate limiting middleware for FastAPI applications."""
+"""This module implements a rate limiting middleware for the application"""
 import time
 from fastapi import Request, status
 from starlette.middleware.base import BaseHTTPMiddleware

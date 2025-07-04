@@ -1,10 +1,9 @@
-
-"""price.py CRUD operations for token prices."""
+# pylint: disable=E1102
+"""CRUD operations for token prices."""
 from datetime import datetime
 from typing import List
 from sqlalchemy.orm import Session # type: ignore
 from sqlalchemy import func, distinct
-
 
 from app.models.token_price import TokenPrice
 from app.schemas.token_price import TokenPriceCreate
@@ -46,22 +45,23 @@ def get_latest_token_price(db: Session, token_symbol: str, granularity: str):
     ).order_by(TokenPrice.timestamp.desc()).first()
 
 def get_all_token_symbols(db: Session) -> List[str]:
+    """Get a list of all unique token symbols in the database."""
     return [s[0] for s in db.query(distinct(TokenPrice.token_symbol)).all()]
 
 # Aggregation functions (for SQLite, using standard SQL date functions)
 def get_hourly_aggregates(db: Session, start_time: datetime, end_time: datetime):
     """ Get hourly aggregates for token prices."""
     # Standard SQL aggregation for hourly. Note: SQLite does not have a direct equivalent to `time_bucket`.
-    # We use `strftime` for grouping.
+    # use `strftime` for grouping.
     # For `price_last` and `price_first` for SQLite, true last/first in group is complex.
-    # We will use `AVG` for simplicity, or specific subqueries for more accurate OHLCV.
+    # use `AVG` for simplicity, or specific subqueries for more accurate OHLCV(open, high, low, close and volume).
     return db.query(
         TokenPrice.token_symbol,
         func.strftime('%Y-%m-%d %H:00:00', TokenPrice.timestamp).label('timestamp_hour_str'),
         func.avg(TokenPrice.price).label('price_avg'), # Using average as a simple representation
         func.max(TokenPrice.price).label('price_high'), # Max price in the hour
         func.min(TokenPrice.price).label('price_low'), # Min price in the hour
-        func.count().label('num_data_points')
+        func.count().label('num_data_points') #pylint: disable=E1102
     ).filter(
         TokenPrice.granularity == '5min',
         TokenPrice.timestamp >= start_time,

@@ -12,7 +12,14 @@ class Settings(BaseSettings):
         extra = 'ignore'
 
     DATABASE_URL: str
-    COINGECKO_API_KEY: Optional[str] = None
+    COINGECKO_API_KEY: Optional[str] = None # API key for CoinGecko
+    COINGECKO_API_URL: str = "https://api.coingecko.com/api/v3" # Default API URL
+    COINGECKO_TOKEN_LIST_URL: str = "https://api.coingecko.com/api/v3/coins/list" # Default token list
+    COINGECKO_PRICE_URL: str = "https://api.coingecko.com/api/v3/simple/price" # Default price endpoint
+    COINGECKO_HISTORICAL_PRICE_URL: str = "https://api.coingecko.com/api/v3/coins/{id}/market_chart/range" # Default historical price endpoint
+    COINGECKO_AGGREGATED_PRICE_URL: str = "https://api.coingecko.com/api/v3/coins/{id}/market_chart" # Default aggregated price endpoint
+    COINGECKO_AGGREGATED_PRICE_HOURLY_URL: str = "https://api.coingecko.com/api/v3/coins/{id}/market_chart?vs_currencies=usd&days=1&interval=hourly" # Default hourly aggregated price endpoint
+    COINGECKO_AGGREGATED_PRICE_DAILY_URL: str = "https://api.coingecko.com/api/v3/coins/{id}/market_chart?vs_currencies=usd&days=30&interval=daily" # Default daily aggregated price endpoint
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
