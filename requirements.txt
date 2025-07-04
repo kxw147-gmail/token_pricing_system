@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+pydantic
+python-jose[cryptography] # For JWT
+passlib[bcrypt] # For password hashing
+python-dotenv
+httpx # For external API calls
+tenacity # For retries
+#asyncio_rate_limit # For rate limiting external API calls, module not found
