@@ -20,5 +20,7 @@ class Settings(BaseSettings):
     RATE_LIMIT_PER_MINUTE: int = 60
     DATA_RETENTION_RAW_DAYS: int = 30
     DATA_RETENTION_AGG_DAYS: int = 1825
+    LOG_LEVEL: str = "INFO"
+    LOG_FILE_PATH: str = "app.log"
     
 settings = Settings()
