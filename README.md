@@ -100,13 +100,11 @@ cd token-pricing-system
 It's highly recommended to use a virtual environment to manage dependencies.
 
 Bash
-
 python3 -m venv venv
 source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
 
 4. Install Dependencies
 Bash
-
 pip install -r requirements.txt
 
 5. Configure Environment Variables
@@ -115,22 +113,26 @@ Modify .env file in the project root and fill in the values.
 
 # .env file
 DATABASE_URL="sqlite:///./local_prices.db" # Local SQLite file database
-COINGECKO_API_KEY="YOUR_COINGECKO_API_KEY" # Optional for CoinGecko free tier, needed for higher limits
-JWT_SECRET_KEY="super-secret-jwt-key-replace-me-with-a-strong-one"
+COINGECKO_API_KEY="YOUR_COINGECKO_API_KEY" # Get a free API key for CoinGecko free tier, needed for higher limits
+JWT_SECRET_KEY="super-secret-jwt-key-replace-me-with-a-strong-one" # Replace with a strong, random string, Bash: "openssl rand -hex 32"
 JWT_ALGORITHM="HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES=30
+ACCESS_TOKEN_EXPIRE_MINUTES=60
 RATE_LIMIT_PER_MINUTE=60
 DATA_RETENTION_RAW_DAYS=30 # Retain raw 5min data for 30 days in DB
 DATA_RETENTION_AGG_DAYS=365 * 5 # Retain aggregated 1h/1d data for 5 years in DB
 LOG_LEVEL="INFO" # DEBUG, INFO, WARNING, ERROR, CRITICAL
 LOG_FILE_PATH="app.log" # Path to the log file (relative to project root)
-Important: Replace YOUR_COINGECKO_API_KEY with your actual CoinGecko API key if you have one (or plan to use a paid tier for higher rate limits). The system works without it for the free tier, but explicit key usage might be required for higher throughput. Also, generate a strong, random string for JWT_SECRET_KEY.
+
+Important: Replace YOUR_COINGECKO_API_KEY with your actual CoinGecko API key if you have one (or plan to use a paid tier for higher rate limits). The system works without it for the free tier, but explicit key usage might be required for higher throughput. Also, generate a strong, random string for JWT_SECRET_KEY using command
+
+Bash
+openssl rand -hex 32
+
 
 6. Initialize the Database
 Run the setup script to create the necessary database tables:
 
 Bash
-
 python scripts/setup_db.py
 This will create local_prices.db in your project root.
 

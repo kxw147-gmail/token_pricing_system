@@ -1,12 +1,14 @@
-fastapi
-uvicorn[standard]
-sqlalchemy
-pydantic
+fastapi # For building the API
+uvicorn[standard] # For running the FastAPI app
+sqlalchemy # For database integration
+pydantic # For data validation
 python-jose[cryptography] # For JWT
 passlib[bcrypt] # For password hashing
-python-dotenv
+python-dotenv # For environment variable management
 httpx # For external API calls
 tenacity # For retries
-pytest
-python-multipart
+pytest # For testing
+python-multipart # For file uploads
 aiolimiter # For rate limiting external API calls
+pytest-mock # For mocking in tests
+pytest-asyncio # For async testing

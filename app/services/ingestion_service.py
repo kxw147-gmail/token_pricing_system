@@ -74,10 +74,16 @@ async def ingest_token_price(token_symbol: str, vs_currency: str = "usd"):
             granularity='5min',
             source='coingecko'
         )
+        # `create_token_price` is a function that is used to create a new token price entry in the
+        # database. It takes in a database session and a `TokenPriceCreate` object as parameters. The
+        # `TokenPriceCreate` object contains the necessary information to create a new token price
+        # entry, including the token symbol, timestamp, price, granularity, and source. Inside the
+        # function, it creates a new token price entry in the database using the provided information.
         create_token_price(db, price_data)
         logger.info(f"Ingested {price_data.token_symbol} price {price_data.price} at {price_data.timestamp} (granularity: {price_data.granularity})")
     except Exception as e:
         logger.error(f"Failed to ingest price for {token_symbol}: {e}")
+        pass
     finally:
         db.close()
 
