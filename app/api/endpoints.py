@@ -117,9 +117,20 @@ async def get_latest_price(
         logger.warning(f"No latest price data found in DB for {token_symbol.upper()} with granularity {granularity}.")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No latest price data found")
 
-    await set_cache(cache_key, price.model_dump(), expire=60)
+    # Manually construct the Pydantic model instead of using from_orm
+    pydantic_price = TokenPriceInDB(
+        id=price.id,
+        token_symbol=price.token_symbol,
+        timestamp=price.timestamp,
+        price=price.price,
+        granularity=price.granularity,
+        source=price.source,
+        created_at=price.created_at if hasattr(price, "created_at") else None,
+        updated_at=price.updated_at if hasattr(price, "updated_at") else None,
+    )
+    await set_cache(cache_key, pydantic_price.model_dump(), expire=60)
     logger.info(f"Fetched latest price for {token_symbol.upper()} from DB and cached it. Price: {price.price}")
-    return price
+    return pydantic_price
 
 # --- Price Prefetching Endpoint (Triggered internally or by a privileged user) ---
 @router.post(

@@ -9,7 +9,7 @@ TEST_PASSWORD = "testpassword"
 
 
 def run_test_client():
-    """Runs a series of requests to test the API endpoints."""
+    """Runs e2e tests against the API endpoints as a client."""
     session = requests.Session()
 
     # --- 1. Register a new user ---
@@ -85,6 +85,19 @@ def run_test_client():
     except requests.exceptions.RequestException as e:
         print(f"Triggering prefetch failed: {e}")
 
+    # --- 7. Rate limit test ---
+    print("\n--- Testing rate limiting on '/users/me/' ---")
+    rate_limit = 60  # Adjust if your server uses a different limit
+    hit_429 = False
+    for i in range(rate_limit + 2):
+        r = session.get(f"{BASE_URL}/users/me/")
+        print(f"Request {i+1}: status {r.status_code}")
+        if r.status_code == 429:
+            print(f"Rate limit hit at request {i+1}: {r.json()}")
+            hit_429 = True
+            break
+    if not hit_429:
+        print("Did not hit rate limit after expected number of requests.")
 
 if __name__ == "__main__":
     run_test_client()

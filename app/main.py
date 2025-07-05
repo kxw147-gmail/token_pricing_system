@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+import os
 
 from app.api import endpoints
 from app.core.config import settings
@@ -54,14 +55,16 @@ async def lifespan(app: FastAPI):
         raise
     await connect_redis()
     symbols_to_ingest = ["bitcoin", "ethereum", "ripple", "solana", "cardano", "dogecoin"]
-    ingestion_task = asyncio.create_task(start_ingestion_loop(interval_minutes=5, symbols=symbols_to_ingest))
-    aggregation_task = asyncio.create_task(start_aggregation_loop(interval_minutes=60))
-    retention_task = asyncio.create_task(run_data_retention_job())
+    
+    logger.info("Starting background tasks (ingestion, aggregation, retention).")
+    asyncio.create_task(start_ingestion_loop(interval_minutes=5, symbols=symbols_to_ingest))
+    asyncio.create_task(start_aggregation_loop(interval_minutes=60))
+    asyncio.create_task(run_data_retention_job())
     print("Application startup complete.")
     logger.info("Background tasks (ingestion, aggregation, retention) started.")
     logger.info("Application startup complete.")
     yield  # Application runs during this time
-
+   
     # Shutdown actions
     await disconnect_redis()
     print("Application shutdown complete.")
@@ -72,6 +75,7 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
 
 # Global Exception Handler for validation errors
 @app.exception_handler(RequestValidationError)

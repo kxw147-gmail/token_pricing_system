@@ -86,9 +86,13 @@ token_pricing_system/
 Follow these steps to set up and run the Token Pricing System locally.
 
 1. Prerequisites
-Python 3.9+
+Python 3.11+
 
 pip (Python package installer)
+
+Bash
+brew install python@3.11.5
+python --version
 
 2. Clone the Repository
 Bash
@@ -100,8 +104,8 @@ cd token-pricing-system
 It's highly recommended to use a virtual environment to manage dependencies.
 
 Bash
-python3 -m venv venv
-source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows, use `venv\Scripts\activate`
 
 4. Install Dependencies
 Bash
@@ -109,7 +113,6 @@ pip install -r requirements.txt
 
 5. Configure Environment Variables
 Modify .env file in the project root and fill in the values.
-
 
 # .env file
 DATABASE_URL="sqlite:///./local_prices.db" # Local SQLite file database
@@ -127,7 +130,6 @@ Important: Replace YOUR_COINGECKO_API_KEY with your actual CoinGecko API key if 
 
 Bash
 openssl rand -hex 32
-
 
 6. Initialize the Database
 Run the setup script to create the necessary database tables:
