@@ -122,7 +122,7 @@ async def start_aggregation_loop(interval_minutes: int = 60):
         logger.info(f"Next aggregation check in {sleep_duration:.2f} seconds.")
         await asyncio.sleep(sleep_duration)
 
-async def run_data_retention_job():
+async def run_data_retention_job(single_run: bool = False):
     """Periodically deletes old 5-min granularity data."""
     logger.info("Starting data retention job loop.")
     while True:
@@ -145,7 +145,12 @@ async def run_data_retention_job():
         finally:
             db.close()
         
+        # If this is a single run, exit after one iteration.
+        if single_run:
+            logger.info("Data retention job: single run complete.")
+            break
+        
         # This job is not time-critical, so a longer sleep is fine.
-        sleep_duration = 6 * 3600 # Run every 6 hours
+        sleep_duration = 12 * 3600 # Run every 12 hours
         logger.info(f"Next data retention run in {sleep_duration / 3600:.2f} hours.")
         await asyncio.sleep(sleep_duration)

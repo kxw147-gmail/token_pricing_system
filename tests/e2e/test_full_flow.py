@@ -4,13 +4,9 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
 import asyncio
-import time
 
-# Import helper functions from test_api.py (or copy them if preferred)
-# Assuming test_api.py is in the same folder as test_full_flow.py,
-# we can import its helper functions.
-from tests.integration.test_api import create_test_user, get_auth_token
 
+from app.core.config import settings
 # Import actual services to potentially interact with background tasks
 from app.services.ingestion_service import ingest_token_price
 from app.services.aggregation_service import run_hourly_aggregation, run_daily_aggregation, run_data_retention_job
@@ -38,7 +34,7 @@ async def simulate_background_tasks(db_session, token_symbol="bitcoin", sleep_du
     await asyncio.sleep(sleep_duration)
 
     print("Simulating data retention job (briefly)...")
-    await run_data_retention_job()
+    await run_data_retention_job(single_run=True)  # Run once for the test
     await asyncio.sleep(sleep_duration)
 
 async def test_full_user_flow(client: TestClient, db_session: Session):

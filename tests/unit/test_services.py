@@ -214,7 +214,7 @@ async def test_run_data_retention_job_deletes_old_data(mocker, mock_db_session):
     mocker.patch.object(settings, 'DATA_RETENTION_RAW_DAYS', 1) # Set retention to 1 day for test
 
     with pytest.raises(asyncio.CancelledError):
-        await aggregation_service.run_data_retention_job()
+        await aggregation_service.run_data_retention_job(single_run=True)
 
     mock_db_session.query.assert_called_once_with(TokenPrice)
     mock_query_filter.delete.assert_called_once_with(synchronize_session=False)
