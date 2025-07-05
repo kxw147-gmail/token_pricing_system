@@ -8,4 +8,5 @@ python-dotenv
 httpx # For external API calls
 tenacity # For retries
 pytest
-# asyncio_rate_limit # For rate limiting external API calls, module not found
+python-multipart
+aiolimiter # For rate limiting external API calls

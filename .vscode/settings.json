@@ -5,6 +5,7 @@
     ],
     "python.defaultInterpreterPath": "/Users/kaiwang/.pyenv/shims/python",
     "cSpell.words": [
+        "aiolimiter",
         "autoflush",
         "sessionmaker"
     ]

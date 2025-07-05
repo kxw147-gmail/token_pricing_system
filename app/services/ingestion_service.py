@@ -7,8 +7,9 @@ from app.schemas.token_price import TokenPriceCreate
 from app.core.config import settings
 from app.core.db import SessionLocal
 from tenacity import retry, wait_fixed, stop_after_attempt, retry_if_exception_type
-from asyncio_rate_limit import RateLimiter # For rate limiting external API calls
-
+#from asyncio_rate_limit import RateLimiter # For rate limiting external API calls
+from aiolimiter import AsyncLimiter
+from typing import List
 # CoinGecko API URL and endpoint
 COINGECKO_BASE_URL = "https://api.coingecko.com/api/v3"
 COINGECKO_PRICE_ENDPOINT = "/simple/price"
@@ -16,11 +17,11 @@ COINGECKO_PRICE_ENDPOINT = "/simple/price"
 # Rate limit for CoinGecko API (adjust as per CoinGecko's limits)
 # Free tier might be ~10-50 calls/minute, paid tiers much higher.
 # Using a conservative 10 calls per minute (1 call every 6 seconds)
-rate_limiter = RateLimiter(rate_limit=1, period=6) # 1 call every 6 seconds
+rate_limiter = AsyncLimiter(1, 6) # 1 call every 6 seconds
 
 @retry(wait=wait_fixed(5), stop=stop_after_attempt(3), retry=retry_if_exception_type(httpx.RequestError))
 async def fetch_price_from_coingecko(token_symbol: str, vs_currency: str = "usd"):
-    """Fetches real-time price from CoinGecko API."""
+    """Fetches real-time price from CoinGecko API"""
     params = {
         "ids": token_symbol,
         "vs_currencies": vs_currency,
@@ -50,9 +51,7 @@ async def fetch_price_from_coingecko(token_symbol: str, vs_currency: str = "usd"
             raise
 
 async def ingest_token_price(token_symbol: str, vs_currency: str = "usd"):
-    """
-    Fetches and stores a single token's 5-minute price data.
-    """
+    """Fetches and stores a single token's 5-minute price data."""
     db: Session = SessionLocal()
     try:
         current_price = await fetch_price_from_coingecko(token_symbol, vs_currency)
@@ -77,9 +76,7 @@ async def ingest_token_price(token_symbol: str, vs_currency: str = "usd"):
         db.close()
 
 async def start_ingestion_loop(interval_minutes: int = 5, symbols: List[str] = ["bitcoin", "ethereum"]):
-    """
-    Continuously ingests prices for specified symbols.
-    """
+    """Continuously ingests prices for specified symbols."""
     print(f"Starting ingestion loop for {symbols} every {interval_minutes} minutes...")
     while True:
         current_time = datetime.now(timezone.utc)

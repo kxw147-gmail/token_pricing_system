@@ -4,6 +4,8 @@ from fastapi import FastAPI, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
+
 from app.api import endpoints
 from app.core.config import settings
 from app.services.cache_service import connect_redis, disconnect_redis # Only need connect/disconnect
@@ -31,32 +33,28 @@ app.add_middleware(
 # Apply custom rate limiting middleware (uses in-memory cache now)
 app.add_middleware(RateLimitMiddleware, limit_per_minute=settings.RATE_LIMIT_PER_MINUTE)
 
-
-@app.on_event("startup")
-async def startup_event():
-    """Application startup event handler."""
-    # Initialize in-memory cache
-    await connect_redis() # This now initializes the in-memory cache cleanup task
-
-    # Start background ingestion and aggregation tasks
-    # These tasks will use the shared SQLAlchemy engine and in-memory cache
-    # Example symbols to ingest - customize as needed
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup actions
+    await connect_redis()
     symbols_to_ingest = ["bitcoin", "ethereum", "ripple", "solana", "cardano", "dogecoin"]
-    asyncio.create_task(start_ingestion_loop(interval_minutes=5, symbols=symbols_to_ingest))
-    asyncio.create_task(start_aggregation_loop(interval_minutes=60))
-    # Start data retention job to prune old raw data
-    asyncio.create_task(run_data_retention_job())
-
-
+    ingestion_task = asyncio.create_task(start_ingestion_loop(interval_minutes=5, symbols=symbols_to_ingest))
+    aggregation_task = asyncio.create_task(start_aggregation_loop(interval_minutes=60))
+    retention_task = asyncio.create_task(run_data_retention_job())
     print("Application startup complete.")
 
+    yield  # Application runs during this time
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Application shutdown event handler."""
-    # No explicit disconnection for in-memory cache
+    # Shutdown actions
     await disconnect_redis()
     print("Application shutdown complete.")
+
+app = FastAPI(
+    title="Token Pricing API",
+    description="Local real-time and historical cryptocurrency price data.",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 
 # Global Exception Handler for validation errors
 @app.exception_handler(RequestValidationError)
