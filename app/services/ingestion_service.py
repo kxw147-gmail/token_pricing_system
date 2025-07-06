@@ -110,3 +110,6 @@ async def start_ingestion_loop(interval_minutes: int = 5, symbols: List[str] = [
         
         logger.info(f"Next ingestion for {symbols} scheduled in {sleep_duration:.2f} seconds.")
         await asyncio.sleep(sleep_duration)
+
+
+

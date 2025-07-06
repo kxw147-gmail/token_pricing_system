@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session # type: ignore
 from datetime import datetime, timedelta
@@ -9,11 +9,13 @@ from app.core.db import get_db
 from app.core.config import settings
 from app.core.security_utils import create_access_token, get_password_hash, verify_password
 from app.api.security import get_current_active_user
+from app.models.token_price import TokenPrice
 from app.schemas.user import UserCreate, UserInDB, Token
 from app.schemas.token_price import TokenPriceInDB
 from app.crud.token_price import get_token_prices, get_latest_token_price
 from app.services.cache_service import get_cache, set_cache
 from app.models.user import User
+from app.services.backfill_service import auto_backfill_job
 
 import asyncio
 
@@ -66,26 +68,49 @@ async def read_users_me(current_user: User = Depends(get_current_active_user)):
     response_model=List[TokenPriceInDB],
     summary="Query historical token prices",
     description="Fetches historical price data for a given token within a time range and granularity.",
-    dependencies=[Depends(get_current_active_user)]
+    #dependencies=[Depends(get_current_active_user)]
+)
+@router.get(
+    "/prices/{token_symbol}",
+    response_model=List[TokenPriceInDB],
+    summary="Query historical token prices",
+    description="Fetches historical price data for a given token within a time range and granularity. "
+                "You can omit granularity (returns all), provide one value, or multiple (?granularity=5min&granularity=1d).",
 )
 async def get_historical_prices(
     token_symbol: str,
-    granularity: str = Query(..., pattern="^(5min|1h|1d)$", description="Data granularity (5min, 1h, 1d)"),
+    granularity: Optional[List[str]] = Query(
+        default=None,
+        pattern="^(5min|1h|1d)$",
+        description="Data granularity (5min, 1h, 1d). Omit for all, provide one, or use multiple (?granularity=5min&granularity=1d)."
+    ),
     start_time: datetime = Query(..., description="Start time (ISO 8601, e.g., 2023-10-26T00:00:00Z)"),
     end_time: datetime = Query(..., description="End time (ISO 8601, e.g., 2023-10-26T23:59:59Z)"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
 ):
-    logger.info(f"User {current_user.username} querying historical prices for {token_symbol.upper()} "
-                f"with granularity {granularity} from {start_time.isoformat()} to {end_time.isoformat()}.")
+    logger.info(f"User querying historical prices for {token_symbol.upper()} "
+                f"with granularities {granularity or 'ALL'} from {start_time.isoformat()} to {end_time.isoformat()}.")
     if start_time >= end_time:
         logger.warning(f"Invalid time range for {token_symbol}: start_time {start_time} >= end_time {end_time}.")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="start_time must be before end_time")
 
-    prices = get_token_prices(db, token_symbol.upper(), granularity, start_time, end_time)
+    prices = []
+    if granularity:
+        # Accept one or multiple granularities
+        for g in granularity:
+            prices.extend(get_token_prices(db, token_symbol.upper(), g, start_time, end_time))
+        prices.sort(key=lambda x: x.timestamp)
+    else:
+        # No granularity provided: return all granularities in the range
+        prices = db.query(TokenPrice).filter(
+            TokenPrice.token_symbol == token_symbol.upper(),
+            TokenPrice.timestamp >= start_time,
+            TokenPrice.timestamp <= end_time
+        ).order_by(TokenPrice.timestamp.asc()).all()
+
     if not prices:
         logger.info(f"No historical price data found for {token_symbol.upper()} "
-                    f"granularity {granularity} in the requested range.")
+                    f"granularity {granularity or 'ALL'} in the requested range.")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No price data found for the given criteria")
     logger.info(f"Returned {len(prices)} historical prices for {token_symbol.upper()}.")
     return prices
@@ -103,8 +128,48 @@ async def get_latest_price(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    logger.info(f"User {current_user.username} querying latest price for {token_symbol.upper()} "
+    logger.info(f"User querying latest price for {token_symbol.upper()} "
                 f"with granularity {granularity}.")
+    cache_key = f"latest_price:{token_symbol.upper()}:{granularity}"
+    cached_data = await get_cache(cache_key)
+
+    if cached_data:
+        logger.info(f"Serving latest price for {token_symbol.upper()} from cache.")
+        return TokenPriceInDB(**cached_data)
+
+    price = get_latest_token_price(db, token_symbol.upper(), granularity)
+    if not price:
+        logger.warning(f"No latest price data found in DB for {token_symbol.upper()} with granularity {granularity}.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No latest price data found")
+
+    # Manually construct the Pydantic model instead of using from_orm
+    pydantic_price = TokenPriceInDB(
+        id=price.id,
+        token_symbol=price.token_symbol,
+        timestamp=price.timestamp,
+        price=price.price,
+        granularity=price.granularity,
+        source=price.source,
+        created_at=price.created_at if hasattr(price, "created_at") else None,
+        updated_at=price.updated_at if hasattr(price, "updated_at") else None,
+    )
+    await set_cache(cache_key, pydantic_price.model_dump(), expire=60)
+    logger.info(f"Fetched latest price for {token_symbol.upper()} from DB and cached it. Price: {price.price}")
+    return pydantic_price@router.get(
+    "/prices/latest/{token_symbol}",
+    response_model=TokenPriceInDB,
+    summary="Get latest token price",
+    description="Retrieves the most recent price for a given token at 5min granularity, using cache if available.",
+    dependencies=[Depends(get_current_active_user)]
+)
+    
+async def get_latest_price(
+    token_symbol: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    granularity = "5min"
+    logger.info(f"User querying latest price for {token_symbol.upper()} with granularity {granularity}.")
     cache_key = f"latest_price:{token_symbol.upper()}:{granularity}"
     cached_data = await get_cache(cache_key)
 
@@ -145,3 +210,24 @@ async def trigger_price_prefetch(token_symbol: str, current_user: User = Depends
     logger.info(f"User {current_user.username} triggered manual prefetch for {token_symbol.upper()}.")
     asyncio.create_task(ingest_token_price(token_symbol))
     return {"message": f"Prefetch for {token_symbol.upper()} initiated. Data will be available shortly."}
+
+
+@router.post("/backfill", status_code=202)
+async def trigger_backfill(
+    background_tasks: BackgroundTasks,
+    symbols: list[str] = Query(
+        default=None,
+        description="List of token symbols to backfill (e.g. bitcoin,ethereum). If not provided, uses default from settings."
+    ),
+):
+    """
+    Trigger an on-demand historical data backfill for the given token symbols.
+    If no symbols are provided, uses the default symbol list from settings.
+    """
+    # Use default symbol list from settings if not provided
+    symbols_to_use = symbols or getattr(settings, "DEFAULT_SYMBOLS", ["bitcoin", "ethereum", "ripple", "solana", "cardano", "dogecoin"])
+    if not symbols_to_use:
+        raise HTTPException(status_code=400, detail="No symbols provided and no default symbol list configured.")
+
+    background_tasks.add_task(auto_backfill_job, symbols_to_use)
+    return {"detail": f"Backfill job started for: {symbols_to_use}"}

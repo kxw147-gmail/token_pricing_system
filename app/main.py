@@ -54,12 +54,13 @@ async def lifespan(app: FastAPI):
         # Depending on criticality, you might want to exit here or just log
         raise
     await connect_redis()
-    symbols_to_ingest = ["bitcoin", "ethereum", "ripple", "solana", "cardano", "dogecoin"]
-    
+     # Get symbols to ingest from settings
+    symbols_to_ingest = getattr(settings, "DEFAULT_SYMBOLS", ["bitcoin", "ethereum", "ripple", "solana", "cardano", "dogecoin"])
     logger.info("Starting background tasks (ingestion, aggregation, retention).")
     asyncio.create_task(start_ingestion_loop(interval_minutes=5, symbols=symbols_to_ingest))
-    asyncio.create_task(start_aggregation_loop(interval_minutes=60))
-    asyncio.create_task(run_data_retention_job())
+    #asyncio.create_task(start_aggregation_loop(interval_minutes=60))
+    #asyncio.create_task(run_data_retention_job())
+    
     print("Application startup complete.")
     logger.info("Background tasks (ingestion, aggregation, retention) started.")
     logger.info("Application startup complete.")
