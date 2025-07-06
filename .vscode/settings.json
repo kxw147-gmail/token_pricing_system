@@ -1,7 +1,7 @@
 {
     "pylint.interpreter": [
         "/Users/kaiwang/.pyenv/shims/python",
-        "${workspaceFolder}/.venv/bin/python"
+        "\"${workspaceFolder}/.venv/bin/python\""
     ],
     "python.defaultInterpreterPath": "/Users/kaiwang/.pyenv/shims/python",
     "cSpell.words": [

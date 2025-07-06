@@ -12,3 +12,4 @@ python-multipart # For file uploads
 aiolimiter # For rate limiting external API calls
 pytest-mock # For mocking in tests
 pytest-asyncio # For async testing
+requests # For synchronous HTTP requests

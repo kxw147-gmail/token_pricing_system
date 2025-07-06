@@ -3,10 +3,12 @@
 from datetime import datetime
 from typing import List
 from sqlalchemy.orm import Session # type: ignore
-from sqlalchemy import func, distinct
+from sqlalchemy import func, distinct # type: ignore
 
 from app.models.token_price import TokenPrice
 from app.schemas.token_price import TokenPriceCreate
+from sqlalchemy.dialects.postgresql import insert as postgresql_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 def create_token_price(db: Session, token_price: TokenPriceCreate):
     """Create a new token price entry in the database."""
@@ -15,6 +17,46 @@ def create_token_price(db: Session, token_price: TokenPriceCreate):
     db.commit()
     db.refresh(db_token_price)
     return db_token_price
+
+def bulk_create_token_prices(db: Session, token_prices: List[TokenPriceCreate]):
+    """
+    Bulk insert token prices, ignoring duplicates on conflict.
+    This function is optimized for SQLite and PostgreSQL.
+    """
+    if not token_prices:
+        return 0
+
+    price_dicts = [p.model_dump() for p in token_prices]
+    dialect = db.bind.dialect.name
+
+    if dialect == 'sqlite':
+        stmt = sqlite_insert(TokenPrice).values(price_dicts)
+    elif dialect == 'postgresql':
+        stmt = postgresql_insert(TokenPrice).values(price_dicts)
+    else:
+        # Fallback for other dialects (slower, one by one with checks)
+        # This part is not performant for large batches.
+        count = 0
+        for price_dict in price_dicts:
+            exists = db.query(TokenPrice).filter_by(
+                token_symbol=price_dict['token_symbol'],
+                granularity=price_dict['granularity'],
+                timestamp=price_dict['timestamp']
+            ).first()
+            if not exists:
+                db.add(TokenPrice(**price_dict))
+                count += 1
+        db.commit()
+        return count
+
+    # For SQLite and PostgreSQL, use ON CONFLICT DO NOTHING
+    # Assumes a unique constraint on (token_symbol, granularity, timestamp)
+    stmt = stmt.on_conflict_do_nothing(
+        index_elements=['token_symbol', 'granularity', 'timestamp']
+    )
+    result = db.execute(stmt)
+    db.commit()
+    return result.rowcount
 
 def get_token_price(db: Session, token_price_id: int):
     """Get a token price by its ID."""

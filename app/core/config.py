@@ -18,8 +18,9 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     RATE_LIMIT_PER_MINUTE: int = 60
-    DATA_RETENTION_RAW_DAYS: int = 30
-    DATA_RETENTION_AGG_DAYS: int = 1825
+    DATA_RETENTION_RAW_DAYS: int = 30 # Keep 5min data for 30 days
+    DATA_RETENTION_HOURLY_DAYS: int = 90 # Keep 1h data for 90 days
+    DATA_RETENTION_DAILY_DAYS: int = 1825 # Keep 1d data for 5 years
     LOG_LEVEL: str = "INFO"
     LOG_FILE_PATH: str = "app.log"
     

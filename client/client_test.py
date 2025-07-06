@@ -99,5 +99,81 @@ def run_test_client():
     if not hit_429:
         print("Did not hit rate limit after expected number of requests.")
 
+    # --- 8. Query historical prices for 'bitcoin' (hourly) ---
+    print("\n--- Querying historical prices for 'bitcoin' (hourly) ---")
+    params_hourly = {
+        "granularity": "1h",
+        "start_time": (now - timedelta(days=2)).isoformat(),
+        "end_time": now.isoformat()
+    }
+    try:
+        r = session.get(f"{BASE_URL}/prices/bitcoin", params=params_hourly)
+        r.raise_for_status()
+        print("Hourly Prices:", r.status_code, r.json())
+    except requests.exceptions.RequestException as e:
+        print(f"Querying hourly prices failed: {e}")
+
+    # --- 9. Query historical prices for 'bitcoin' (daily) ---
+    print("\n--- Querying historical prices for 'bitcoin' (daily) ---")
+    params_daily = {
+        "granularity": "1d",
+        "start_time": (now - timedelta(days=10)).isoformat(),
+        "end_time": now.isoformat()
+    }
+    try:
+        r = session.get(f"{BASE_URL}/prices/bitcoin", params=params_daily)
+        r.raise_for_status()
+        print("Daily Prices:", r.status_code, r.json())
+    except requests.exceptions.RequestException as e:
+        print(f"Querying daily prices failed: {e}")
+
+    # --- 10. Query historical prices spanning 5min, hourly, daily (all combinations) ---
+    print("\n--- Querying historical prices spanning 5min, hourly, daily (all combinations) ---")
+    granularities = ["5min", "1h", "1d"]
+    spans = [
+        ("5min", timedelta(hours=1)),
+        ("1h", timedelta(days=2)),
+        ("1d", timedelta(days=10)),
+        # Cross-boundary: 5min granularity over 2 days, hourly over 10 days, etc.
+        ("5min", timedelta(days=2)),
+        ("1h", timedelta(days=10)),
+        ("1d", timedelta(days=30)),
+    ]
+    for gran, span in spans:
+        params = {
+            "granularity": gran,
+            "start_time": (now - span).isoformat(),
+            "end_time": now.isoformat()
+        }
+        print(f"\nQuerying {gran} prices over {span}:")
+        try:
+            r = session.get(f"{BASE_URL}/prices/bitcoin", params=params)
+            r.raise_for_status()
+            print(f"{gran} Prices:", r.status_code, r.json())
+        except requests.exceptions.RequestException as e:
+            print(f"Querying {gran} prices over {span} failed: {e}")
+
+    # --- 11. Query price to test cache hit (should be cached) ---
+    print("\n--- Querying latest price for 'bitcoin' (should hit cache) ---")
+    try:
+        r1 = session.get(f"{BASE_URL}/prices/latest/bitcoin", params={"granularity": "5min"})
+        r1.raise_for_status()
+        print("First fetch (may be remote):", r1.status_code, r1.json())
+        r2 = session.get(f"{BASE_URL}/prices/latest/bitcoin", params={"granularity": "5min"})
+        r2.raise_for_status()
+        print("Second fetch (should be cache):", r2.status_code, r2.json())
+    except requests.exceptions.RequestException as e:
+        print(f"Cache test failed: {e}")
+
+    # --- 12. Query price to force remote API call (simulate by querying a new token) ---
+    print("\n--- Querying latest price for 'newtoken' (should trigger remote API call) ---")
+    try:
+        r = session.get(f"{BASE_URL}/prices/latest/newtoken", params={"granularity": "5min"})
+        print("Remote fetch (new token):", r.status_code, r.json())
+    except requests.exceptions.RequestException as e:
+        print(f"Remote API call test failed: {e}")
+
+
+
 if __name__ == "__main__":
     run_test_client()
